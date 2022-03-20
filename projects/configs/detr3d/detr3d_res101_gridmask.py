@@ -31,7 +31,7 @@ model = dict(
     use_grid_mask=True,
     img_backbone=dict(
         type='ResNet',
-        depth=101,
+        depth=101,  # 50 is ok
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
@@ -129,6 +129,13 @@ train_pipeline = [
     dict(type='DefaultFormatBundle3D', class_names=class_names),
     dict(type='Collect3D', keys=['gt_bboxes_3d', 'gt_labels_3d', 'img'])
 ]
+'''
+    'img_metas': dict
+    'gt_bboxes_3d': LiDARInstance3DBoxes, FloatTensor(shape=(num_gt_bboxes, 9)) (mmdet3d/core/bbox/structures/lidar_box3d.py)
+    'gt_labels_3d': LongTensor(shape=(num_gt_bboxes,)) 
+    'img': shape=(6, 3, 928, 1600); [-255, 255] (see img_norm_cfg.mean)
+'''
+
 test_pipeline = [
     dict(type='LoadMultiViewImageFromFiles', to_float32=True),
     dict(type='NormalizeMultiviewImage', **img_norm_cfg),
