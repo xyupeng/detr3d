@@ -57,6 +57,7 @@ class Detr3DHead(DETRHead):
 
     def _init_layers(self):
         """Initialize classification branch and regression branch of head."""
+        # called in mmdet.models.dense_heads.DETRHead
         cls_branch = []
         for _ in range(self.num_reg_fcs):
             cls_branch.append(Linear(self.embed_dims, self.embed_dims))
@@ -95,6 +96,7 @@ class Detr3DHead(DETRHead):
 
     def init_weights(self):
         """Initialize weights of the DeformDETR head."""
+        # called in tools/train.py
         self.transformer.init_weights()
         if self.loss_cls.use_sigmoid:
             bias_init = bias_init_with_prob(0.01)
@@ -104,9 +106,7 @@ class Detr3DHead(DETRHead):
     def forward(self, mlvl_feats, img_metas):
         """Forward function.
         Args:
-            mlvl_feats (tuple[Tensor]): Features from the upstream
-                network, each is a 5D-tensor with shape
-                (B, N, C, H, W).
+            mlvl_feats: list of tensors, len == 4; shape=(B, 6, 256, Hi, Wi)
         Returns:
             all_cls_scores (Tensor): Outputs from the classification head, \
                 shape [nb_dec, bs, num_query, cls_out_channels]. Note \
