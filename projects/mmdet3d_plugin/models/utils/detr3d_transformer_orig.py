@@ -56,6 +56,10 @@ class Detr3DTransformer(BaseModule):
         self.num_feature_levels = num_feature_levels
         self.num_cams = num_cams
         self.two_stage_num_proposals = two_stage_num_proposals
+        self.init_layers()
+
+    def init_layers(self):
+        """Initialize layers of the Detr3DTransformer."""
         self.reference_points = nn.Linear(self.embed_dims, 3)
 
     def init_weights(self):
@@ -75,22 +79,53 @@ class Detr3DTransformer(BaseModule):
                 **kwargs):
         """Forward function for `Detr3DTransformer`.
         Args:
-            mlvl_feats: list of tensors; shape=(B, 6, C, Hi, Wi)
-            query_embed:  tensor(shape=(num_query, c))
-            reg_branches: `nn.ModuleList`; each element is a MLP; len == num_layers
+            mlvl_feats (list(Tensor)): Input queries from
+                different level. Each element has shape
+                [bs, embed_dims, h, w].
+            query_embed (Tensor): The query embedding for decoder,
+                with shape [num_query, c].
+            mlvl_pos_embeds (list(Tensor)): The positional encoding
+                of feats from different level, has the shape
+                 [bs, embed_dims, h, w].
+            reg_branches (obj:`nn.ModuleList`): Regression heads for
+                feature maps from each decoder layer. Only would
+                be passed when
+                `with_box_refine` is True. Default to None.
+        Returns:
+            tuple[Tensor]: results of decoder containing the following tensor.
+                - inter_states: Outputs from decoder. If
+                    return_intermediate_dec is True output has shape \
+                      (num_dec_layers, bs, num_query, embed_dims), else has \
+                      shape (1, bs, num_query, embed_dims).
+                - init_reference_out: The initial value of reference \
+                    points, has shape (bs, num_queries, 4).
+                - inter_references_out: The internal value of reference \
+                    points in decoder, has shape \
+                    (num_dec_layers, bs,num_query, embed_dims)
+                - enc_outputs_class: The classification score of \
+                    proposals generated from \
+                    encoder's feature maps, has shape \
+                    (batch, h*w, num_classes). \
+                    Only would be returned when `as_two_stage` is True, \
+                    otherwise None.
+                - enc_outputs_coord_unact: The regression results \
+                    generated from encoder's feature maps., has shape \
+                    (batch, h*w, 4). Only would \
+                    be returned when `as_two_stage` is True, \
+                    otherwise None.
         """
         assert query_embed is not None
         bs = mlvl_feats[0].size(0)
-        query_pos, query = torch.split(query_embed, self.embed_dims, dim=1)  # both shape=(num_query, emb_dim)
-        query_pos = query_pos.unsqueeze(0).expand(bs, -1, -1)  # shape=(B, num_query, emb_dim)
-        query = query.unsqueeze(0).expand(bs, -1, -1)  # shape=(B, num_query, emb_dim)
-        reference_points = self.reference_points(query_pos)  # (B, num_query, 3)
+        query_pos, query = torch.split(query_embed, self.embed_dims , dim=1)
+        query_pos = query_pos.unsqueeze(0).expand(bs, -1, -1)
+        query = query.unsqueeze(0).expand(bs, -1, -1)
+        reference_points = self.reference_points(query_pos)
         reference_points = reference_points.sigmoid()
         init_reference_out = reference_points
 
         # decoder
-        query = query.permute(1, 0, 2)  # (num_query, B, emb_dim)
-        query_pos = query_pos.permute(1, 0, 2)  # (num_query, B, emb_dim)
+        query = query.permute(1, 0, 2)
+        query_pos = query_pos.permute(1, 0, 2)
         inter_states, inter_references = self.decoder(
             query=query,
             key=None,
@@ -101,9 +136,6 @@ class Detr3DTransformer(BaseModule):
             **kwargs)
 
         inter_references_out = inter_references
-        # inter_states: tensor(shape=(num_layers, num_query, B, 256))
-        # init_reference_out: tensor(shape=(B, num_query, 3))
-        # inter_references_out: tensor(shape=(num_layers, B, num_query, 3))
         return inter_states, init_reference_out, inter_references_out
 
 
@@ -128,9 +160,16 @@ class Detr3DTransformerDecoder(TransformerLayerSequence):
                 **kwargs):
         """Forward function for `Detr3DTransformerDecoder`.
         Args:
-            query: shape=(num_query, B, emb_dim)`.
-            reference_points: shape=(B, num_query, 3); range (0, 1)
-            reg_branches: `nn.ModuleList`; each element is a MLP; len == num_layers
+            query (Tensor): Input query with shape
+                `(num_query, bs, embed_dims)`.
+            reference_points (Tensor): The reference
+                points of offset. has shape
+                (bs, num_query, 4) when as_two_stage,
+                otherwise has shape ((bs, num_query, 2).
+            reg_branch: (obj:`nn.ModuleList`): Used for
+                refining the regression results. Only would
+                be passed when with_box_refine is True,
+                otherwise would be passed a `None`.
         Returns:
             Tensor: Results with shape [1, num_query, bs, embed_dims] when
                 return_intermediate is `False`, otherwise it has shape
@@ -145,11 +184,11 @@ class Detr3DTransformerDecoder(TransformerLayerSequence):
                 output,
                 *args,
                 reference_points=reference_points_input,
-                **kwargs)  # (num_query, B, emb_dim)
-            output = output.permute(1, 0, 2)  # (B, num_query, emb_dim)
+                **kwargs)
+            output = output.permute(1, 0, 2)
 
-            if reg_branches is not None:  # to generate new reference_points
-                tmp = reg_branches[lid](output)  # (B, num_query, 10)
+            if reg_branches is not None:
+                tmp = reg_branches[lid](output)
                 
                 assert reference_points.shape[-1] == 3
 
@@ -161,9 +200,9 @@ class Detr3DTransformerDecoder(TransformerLayerSequence):
                 
                 new_reference_points = new_reference_points.sigmoid()
 
-                reference_points = new_reference_points.detach()  # (B, num_query, 3)
+                reference_points = new_reference_points.detach()
 
-            output = output.permute(1, 0, 2)  # (num_query, B, emb_dim)
+            output = output.permute(1, 0, 2)
             if self.return_intermediate:
                 intermediate.append(output)
                 intermediate_reference_points.append(reference_points)
@@ -266,8 +305,8 @@ class Detr3DCrossAtten(BaseModule):
                 value,
                 residual=None,
                 query_pos=None,
-                reference_points=None,
                 key_padding_mask=None,
+                reference_points=None,
                 spatial_shapes=None,
                 level_start_index=None,
                 **kwargs):
@@ -283,7 +322,23 @@ class Detr3DCrossAtten(BaseModule):
                 same shape as `x`. Default None. If None, `x` will be used.
             query_pos (Tensor): The positional encoding for `query`.
                 Default: None.
-            reference_points: shape=(B, num_query, 3); range (0, 1): top-left (0, 0), bottom-right(1, 1)
+            key_pos (Tensor): The positional encoding for `key`. Default
+                None.
+            reference_points (Tensor):  The normalized reference
+                points with shape (bs, num_query, 4),
+                all elements is range in [0, 1], top-left (0,0),
+                bottom-right (1, 1), including padding area.
+                or (N, Length_{query}, num_levels, 4), add
+                additional two dimensions is (w, h) to
+                form reference boxes.
+            key_padding_mask (Tensor): ByteTensor for `query`, with
+                shape [bs, num_key].
+            spatial_shapes (Tensor): Spatial shape of features in
+                different level. With shape  (num_levels, 2),
+                last dimension represent (h, w).
+            level_start_index (Tensor): The start index of each level.
+                A tensor has shape (num_levels) and can be represented
+                as [0, h_0*w_0, h_0*w_0+h_1*w_1, ...].
         Returns:
              Tensor: forwarded results with shape [num_query, bs, embed_dims].
         """
@@ -298,29 +353,27 @@ class Detr3DCrossAtten(BaseModule):
         if query_pos is not None:
             query = query + query_pos
 
-        query = query.permute(1, 0, 2)  # (B, num_query, emb_dim)
+        # change to (bs, num_query, embed_dims)
+        query = query.permute(1, 0, 2)
 
         bs, num_query, _ = query.size()
 
         attention_weights = self.attention_weights(query).view(
             bs, 1, num_query, self.num_cams, self.num_points, self.num_levels)
-
+        
         reference_points_3d, output, mask = feature_sampling(
             value, reference_points, self.pc_range, kwargs['img_metas'])
-        # reference_points_3d: shape=(B, num_query, 3); reference_points.clone()
-        # output: shape=(B, emd_dim, num_query, num_cams, num_points, num_levels);
-        # mask: shape=(1, 1, 900, 6, 1, 1)
         output = torch.nan_to_num(output)
         mask = torch.nan_to_num(mask)
 
-        attention_weights = attention_weights.sigmoid() * mask  # shape same as above
+        attention_weights = attention_weights.sigmoid() * mask
         output = output * attention_weights
         output = output.sum(-1).sum(-1).sum(-1)
-        output = output.permute(2, 0, 1)  # (num_query, B, emd_dim)
+        output = output.permute(2, 0, 1)
         
-        output = self.output_proj(output)  # (num_query, B, emd_dim)
+        output = self.output_proj(output)
+        # (num_query, bs, embed_dims)
         pos_feat = self.position_encoder(inverse_sigmoid(reference_points_3d)).permute(1, 0, 2)
-        # pos_feat: shape=(num_query, B, emd_dim)
 
         return self.dropout(output) + inp_residual + pos_feat
 

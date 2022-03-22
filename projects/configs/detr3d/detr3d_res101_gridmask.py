@@ -1,6 +1,6 @@
 _base_ = [
-    '../../../mmdetection3d/configs/_base_/datasets/nus-3d.py',
-    '../../../mmdetection3d/configs/_base_/default_runtime.py'
+    '../../../configs/mmdet3d/_base_/datasets/nus-3d.py',
+    '../../../configs/mmdet3d/_base_/default_runtime.py'
 ]
 
 plugin=True
@@ -65,7 +65,7 @@ model = dict(
                 num_layers=6,
                 return_intermediate=True,
                 transformerlayers=dict(
-                    type='DetrTransformerDecoderLayer',
+                    type='DetrTransformerDecoderLayer',  # mmdet/models/utils/transformer.py
                     attn_cfgs=[
                         dict(
                             type='MultiheadAttention',  # mmcv/cnn/bricks/transformer.py

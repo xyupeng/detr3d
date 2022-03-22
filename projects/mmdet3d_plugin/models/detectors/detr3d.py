@@ -97,8 +97,8 @@ class Detr3D(MVXTwoStageDetector):
         # forward_pts_train()
         outs = self.pts_bbox_head(img_feats, img_metas)
         # outs: {
-        #   'all_cls_scores': FloatTensor(shape=(6, B, 900, 10)),
-        #   'all_bbox_preds': FloatTensor(shape=(6, B, 900, 10)),
+        #   'all_cls_scores': FloatTensor(shape=(num_layers, B, 900, 10)),
+        #   'all_bbox_preds': FloatTensor(shape=(num_layers, B, 900, 10)),
         #   'enc_cls_scores': None,
         #   'enc_bbox_preds': None,
         # }

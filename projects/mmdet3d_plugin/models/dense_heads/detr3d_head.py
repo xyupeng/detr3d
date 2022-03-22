@@ -125,6 +125,9 @@ class Detr3DHead(DETRHead):
             img_metas=img_metas,
         )
         hs = hs.permute(0, 2, 1, 3)
+        # hs: tensor(shape=(num_layers, B, num_query, 256))  # inter_states
+        # init_reference_out: tensor(shape=(B, num_query, 3))
+        # inter_references_out: tensor(shape=(num_layers, B, num_query, 3))
         outputs_classes = []
         outputs_coords = []
 
@@ -149,6 +152,8 @@ class Detr3DHead(DETRHead):
 
             # TODO: check if using sigmoid
             outputs_coord = tmp
+            # outputs_classes: shape=(B, num_query, self.cls_out_channels=10)
+            # outputs_coord: shape=(B, num_query, self.code_size=10)
             outputs_classes.append(outputs_class)
             outputs_coords.append(outputs_coord)
 
@@ -278,15 +283,10 @@ class Detr3DHead(DETRHead):
         """"Loss function for outputs from a single decoder layer of a single
         feature level.
         Args:
-            cls_scores (Tensor): Box score logits from a single decoder layer
-                for all images. Shape [bs, num_query, cls_out_channels].
-            bbox_preds (Tensor): Sigmoid outputs from a single decoder layer
-                for all images, with normalized coordinate (cx, cy, w, h) and
-                shape [bs, num_query, 4].
-            gt_bboxes_list (list[Tensor]): Ground truth bboxes for each image
-                with shape (num_gts, 4) in [tl_x, tl_y, br_x, br_y] format.
-            gt_labels_list (list[Tensor]): Ground truth class indices for each
-                image with shape (num_gts, ).
+            cls_scores: FloatTensor(shape=(B, 900, cls_out_channels=10)),
+            bbox_preds: FloatTensor(shape=(B, 900, code_size=10)),
+            gt_bboxes_list: list of `LiDARInstance3DBoxes`; .tensor.shape=(num_gt_bboxes, 9); len == B
+            gt_labels_list: list of LongTensor(shape=(num_gt_bboxes,)); class_id starts from 0; len == B
             gt_bboxes_ignore_list (list[Tensor], optional): Bounding
                 boxes which can be ignored for each image. Default None.
         Returns:
@@ -343,28 +343,16 @@ class Detr3DHead(DETRHead):
              gt_labels_list,
              preds_dicts,
              gt_bboxes_ignore=None):
-        """"Loss function.
+        """"
         Args:
-            
-            gt_bboxes_list (list[Tensor]): Ground truth bboxes for each image
-                with shape (num_gts, 4) in [tl_x, tl_y, br_x, br_y] format.
-            gt_labels_list (list[Tensor]): Ground truth class indices for each
-                image with shape (num_gts, ).
-            preds_dicts:
-                all_cls_scores (Tensor): Classification score of all
-                    decoder layers, has shape
-                    [nb_dec, bs, num_query, cls_out_channels].
-                all_bbox_preds (Tensor): Sigmoid regression
-                    outputs of all decode layers. Each is a 4D-tensor with
-                    normalized coordinate format (cx, cy, w, h) and shape
-                    [nb_dec, bs, num_query, 4].
-                enc_cls_scores (Tensor): Classification scores of
-                    points on encode feature map , has shape
-                    (N, h*w, num_classes). Only be passed when as_two_stage is
-                    True, otherwise is None.
-                enc_bbox_preds (Tensor): Regression results of each points
-                    on the encode feature map, has shape (N, h*w, 4). Only be
-                    passed when as_two_stage is True, otherwise is None.
+            gt_bboxes_list: list of `LiDARInstance3DBoxes`; .tensor.shape=(num_gt_bboxes, 9); len == B
+            gt_labels_list: list of LongTensor(shape=(num_gt_bboxes,)); class_id starts from 0; len == B
+            preds_dicts: {
+              'all_cls_scores': FloatTensor(shape=(num_layers, B, 900, cls_out_channels=10)),
+              'all_bbox_preds': FloatTensor(shape=(num_layers, B, 900, code_size=10)),
+              'enc_cls_scores': None,
+              'enc_bbox_preds': None,
+            }
             gt_bboxes_ignore (list[Tensor], optional): Bounding boxes
                 which can be ignored for each image. Default None.
         Returns:
@@ -395,6 +383,8 @@ class Detr3DHead(DETRHead):
             self.loss_single, all_cls_scores, all_bbox_preds,
             all_gt_bboxes_list, all_gt_labels_list, 
             all_gt_bboxes_ignore_list)
+        # losses_cls: list of losses (single element tensor); len == num_layers
+        # losses_bbox: list of losses (single element tensor); len == num_layers
 
         loss_dict = dict()
         # loss of proposal generated from encode feature map.
