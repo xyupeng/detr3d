@@ -1,7 +1,3 @@
-# open-mmlab
-mmcv/
-mmdet/
-mmdet3d/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
