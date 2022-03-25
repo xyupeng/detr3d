@@ -254,7 +254,6 @@ class DETRHead(AnchorFreeHead):
         masks = F.interpolate(
             masks.unsqueeze(1), size=x.shape[-2:]).to(torch.bool).squeeze(1)
         # masks: shape=[B, H, W]
-        # masks.shape[-2:] == x.shape[-2:]
 
         # position encoding
         pos_embed = self.positional_encoding(masks)  # [bs, embed_dim, h, w] == x.shape

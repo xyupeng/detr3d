@@ -117,6 +117,7 @@ class Detr3DHead(DETRHead):
         """
 
         query_embeds = self.query_embedding.weight
+        # shape=[num_query, embed_dim * 2]
         
         hs, init_reference, inter_references = self.transformer(
             mlvl_feats,
@@ -125,7 +126,7 @@ class Detr3DHead(DETRHead):
             img_metas=img_metas,
         )
         hs = hs.permute(0, 2, 1, 3)
-        # hs: tensor(shape=(num_layers, B, num_query, 256))  # inter_states
+        # hs: tensor(shape=(num_layers, B, num_query, embed_dim))  # inter_states
         # init_reference_out: tensor(shape=(B, num_query, 3))
         # inter_references_out: tensor(shape=(num_layers, B, num_query, 3))
         outputs_classes = []
@@ -157,8 +158,8 @@ class Detr3DHead(DETRHead):
             outputs_classes.append(outputs_class)
             outputs_coords.append(outputs_coord)
 
-        outputs_classes = torch.stack(outputs_classes)
-        outputs_coords = torch.stack(outputs_coords)
+        outputs_classes = torch.stack(outputs_classes)  # [num_layers, B, num_query, cls_out_channels]
+        outputs_coords = torch.stack(outputs_coords)  # [num_layers, B, num_query, code_size]
         outs = {
             'all_cls_scores': outputs_classes,
             'all_bbox_preds': outputs_coords,

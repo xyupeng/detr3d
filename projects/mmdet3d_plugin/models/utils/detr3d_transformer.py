@@ -81,16 +81,19 @@ class Detr3DTransformer(BaseModule):
         """
         assert query_embed is not None
         bs = mlvl_feats[0].size(0)
-        query_pos, query = torch.split(query_embed, self.embed_dims, dim=1)  # both shape=(num_query, emb_dim)
-        query_pos = query_pos.unsqueeze(0).expand(bs, -1, -1)  # shape=(B, num_query, emb_dim)
-        query = query.unsqueeze(0).expand(bs, -1, -1)  # shape=(B, num_query, emb_dim)
-        reference_points = self.reference_points(query_pos)  # (B, num_query, 3)
-        reference_points = reference_points.sigmoid()
+        query_pos, query = torch.split(query_embed, self.embed_dims, dim=1)
+        query_pos = query_pos.unsqueeze(0).expand(bs, -1, -1)
+        query = query.unsqueeze(0).expand(bs, -1, -1)
+        reference_points = self.reference_points(query_pos).sigmoid()
         init_reference_out = reference_points
+        # query_pos.shape=[B, num_query, emb_dim]
+        # query.shape=[B, num_query, emb_dim]
+        # reference_points.shape=[B, num_query, 3]
+
+        query = query.permute(1, 0, 2)  # shape=[num_query, B, emb_dim]
+        query_pos = query_pos.permute(1, 0, 2)  # shape=[num_query, B, emb_dim]
 
         # decoder
-        query = query.permute(1, 0, 2)  # (num_query, B, emb_dim)
-        query_pos = query_pos.permute(1, 0, 2)  # (num_query, B, emb_dim)
         inter_states, inter_references = self.decoder(
             query=query,
             key=None,
@@ -122,14 +125,13 @@ class Detr3DTransformerDecoder(TransformerLayerSequence):
 
     def forward(self,
                 query,
-                *args,
                 reference_points=None,
                 reg_branches=None,
                 **kwargs):
         """Forward function for `Detr3DTransformerDecoder`.
         Args:
             query: shape=(num_query, B, emb_dim)`.
-            reference_points: shape=(B, num_query, 3); range (0, 1)
+            reference_points: shape=(B, num_query, 3); within (0, 1)
             reg_branches: `nn.ModuleList`; each element is a MLP; len == num_layers
         Returns:
             Tensor: Results with shape [1, num_query, bs, embed_dims] when
@@ -140,11 +142,9 @@ class Detr3DTransformerDecoder(TransformerLayerSequence):
         intermediate = []
         intermediate_reference_points = []
         for lid, layer in enumerate(self.layers):
-            reference_points_input = reference_points
             output = layer(
                 output,
-                *args,
-                reference_points=reference_points_input,
+                reference_points=reference_points,
                 **kwargs)  # (num_query, B, emb_dim)
             output = output.permute(1, 0, 2)  # (B, num_query, emb_dim)
 
@@ -277,8 +277,8 @@ class Detr3DCrossAtten(BaseModule):
                 (num_query, bs, embed_dims).
             key (Tensor): The key tensor with shape
                 `(num_key, bs, embed_dims)`.
-            value (Tensor): The value tensor with shape
-                `(num_key, bs, embed_dims)`. (B, N, C, H, W)
+            value : list of tensor; multiple level features from FPN
+                value[i].shape=[B, num_cams=6, emb_dim, Hi, Wi]
             residual (Tensor): The tensor used for addition, with the
                 same shape as `x`. Default None. If None, `x` will be used.
             query_pos (Tensor): The positional encoding for `query`.
@@ -304,6 +304,7 @@ class Detr3DCrossAtten(BaseModule):
 
         attention_weights = self.attention_weights(query).view(
             bs, 1, num_query, self.num_cams, self.num_points, self.num_levels)
+        # attention_weights: shape=[B, 1, num_queries, num_cams, num_points, num_feature_levels]
 
         reference_points_3d, output, mask = feature_sampling(
             value, reference_points, self.pc_range, kwargs['img_metas'])
