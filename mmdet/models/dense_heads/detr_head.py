@@ -249,19 +249,21 @@ class DETRHead(AnchorFreeHead):
             img_h, img_w, _ = img_metas[img_id]['img_shape']
             masks[img_id, :img_h, :img_w] = 0
 
-        x = self.input_proj(x)
+        x = self.input_proj(x)  # shape=[B, embed_dim, H, W]; 1x1 Conv2d
         # interpolate masks to have the same spatial shape with x
         masks = F.interpolate(
             masks.unsqueeze(1), size=x.shape[-2:]).to(torch.bool).squeeze(1)
-        # position encoding
-        pos_embed = self.positional_encoding(masks)  # [bs, embed_dim, h, w]
-        # outs_dec: [nb_dec, bs, num_query, embed_dim]
-        outs_dec, _ = self.transformer(x, masks, self.query_embedding.weight,
-                                       pos_embed)
+        # masks: shape=[B, H, W]
+        # masks.shape[-2:] == x.shape[-2:]
 
-        all_cls_scores = self.fc_cls(outs_dec)
+        # position encoding
+        pos_embed = self.positional_encoding(masks)  # [bs, embed_dim, h, w] == x.shape
+        outs_dec, _ = self.transformer(x, masks, self.query_embedding.weight, pos_embed)
+        # outs_dec: [nb_dec, bs, num_query, embed_dim]
+
+        all_cls_scores = self.fc_cls(outs_dec)  # [nb_dec, bs, num_query, cls_out_channels=81]
         all_bbox_preds = self.fc_reg(self.activate(
-            self.reg_ffn(outs_dec))).sigmoid()
+            self.reg_ffn(outs_dec))).sigmoid()  # [nb_dec, bs, num_query, 4]; within (0, 1)
         return all_cls_scores, all_bbox_preds
 
     @force_fp32(apply_to=('all_cls_scores_list', 'all_bbox_preds_list'))
@@ -286,7 +288,7 @@ class DETRHead(AnchorFreeHead):
                 normalized coordinate format (cx, cy, w, h) and shape
                 [nb_dec, bs, num_query, 4].
             gt_bboxes_list (list[Tensor]): Ground truth bboxes for each image
-                with shape (num_gts, 4) in [tl_x, tl_y, br_x, br_y] format.
+                with shape (num_gts, 4) in [tl_x, tl_y, br_x, br_y] format. tl: top-left; br: bottom-right
             gt_labels_list (list[Tensor]): Ground truth class indices for each
                 image with shape (num_gts, ).
             img_metas (list[dict]): List of image meta information.
@@ -571,7 +573,7 @@ class DETRHead(AnchorFreeHead):
             dict[str, Tensor]: A dictionary of loss components.
         """
         assert proposal_cfg is None, '"proposal_cfg" must be None'
-        outs = self(x, img_metas)
+        outs = self(x, img_metas)  # tuple[list[Tensor], list[Tensor]]; see forward()
         if gt_labels is None:
             loss_inputs = outs + (gt_bboxes, img_metas)
         else:

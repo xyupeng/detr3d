@@ -4,7 +4,7 @@ _base_ = [
 model = dict(
     type='DETR',
     backbone=dict(
-        type='ResNet',
+        type='ResNet',  # mmdet/models/backbone/resnet.py; always return tuple of feats
         depth=50,
         num_stages=4,
         out_indices=(3, ),
@@ -18,7 +18,7 @@ model = dict(
         num_classes=80,
         in_channels=2048,
         transformer=dict(
-            type='Transformer',
+            type='Transformer',  # mmdet/models/utils/transformer.py
             encoder=dict(
                 type='DetrTransformerEncoder',
                 num_layers=6,
@@ -51,7 +51,7 @@ model = dict(
                                      'ffn', 'norm')),
             )),
         positional_encoding=dict(
-            type='SinePositionalEncoding', num_feats=128, normalize=True),
+            type='SinePositionalEncoding', num_feats=128, normalize=True),  # mmdet/models/utils/positional_encoding.py
         loss_cls=dict(
             type='CrossEntropyLoss',
             bg_cls_weight=0.1,
