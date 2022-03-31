@@ -3,8 +3,11 @@ _base_ = [
     '../../configs/mmdet3d/_base_/default_runtime.py'
 ]
 
-plugin=False
-plugin_dir='projects/mmdet3d_plugin/'
+# plugin=False
+# plugin_dir='projects/mmdet3d_plugin/'
+custom_imports = dict(
+    imports=['projects.mmdet3d_plugin'],
+    allow_failed_imports=False)
 
 # If point cloud range is changed, the models should also change their point
 # cloud range accordingly
