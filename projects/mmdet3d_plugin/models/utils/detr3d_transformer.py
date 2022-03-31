@@ -273,28 +273,20 @@ class Detr3DCrossAtten(BaseModule):
                 **kwargs):
         """Forward Function of Detr3DCrossAtten.
         Args:
-            query (Tensor): Query of Transformer with shape
-                (num_query, bs, embed_dims).
-            key (Tensor): The key tensor with shape
-                `(num_key, bs, embed_dims)`.
+            query: shape=[num_query, B, embed_dims].
+            key: Default None; not used
             value : list of tensor; multiple level features from FPN
                 value[i].shape=[B, num_cams=6, emb_dim, Hi, Wi]
-            residual (Tensor): The tensor used for addition, with the
-                same shape as `x`. Default None. If None, `x` will be used.
-            query_pos (Tensor): The positional encoding for `query`.
-                Default: None.
-            reference_points: shape=(B, num_query, 3); range (0, 1): top-left (0, 0), bottom-right(1, 1)
+            residual: The tensor used for addition, with the same shape as `x`.
+                Default None. If None, `x` will be used.
+            query_pos: shape=[num_query, B, embed_dims]. The positional encoding for `query`.
+            reference_points: shape=[B, num_query, 3]; range (0, 1); relative to pc_range
         Returns:
              Tensor: forwarded results with shape [num_query, bs, embed_dims].
         """
 
-        if key is None:
-            key = query
-        if value is None:
-            value = key
-
         if residual is None:
-            inp_residual = query
+            residual = query
         if query_pos is not None:
             query = query + query_pos
 
@@ -323,7 +315,7 @@ class Detr3DCrossAtten(BaseModule):
         pos_feat = self.position_encoder(inverse_sigmoid(reference_points_3d)).permute(1, 0, 2)
         # pos_feat: shape=(num_query, B, emd_dim)
 
-        return self.dropout(output) + inp_residual + pos_feat
+        return self.dropout(output) + residual + pos_feat
 
 
 def feature_sampling(mlvl_feats, reference_points, pc_range, img_metas):
