@@ -216,7 +216,8 @@ class Detr3DHead(DETRHead):
         label_weights = gt_bboxes.new_ones(num_bboxes)
 
         # bbox targets
-        bbox_targets = torch.zeros_like(bbox_pred)[..., :9]
+        gt_bbox_dim = gt_bboxes.shape[1]
+        bbox_targets = torch.zeros_like(bbox_pred)[..., :gt_bbox_dim]
         bbox_weights = torch.zeros_like(bbox_pred)
         bbox_weights[pos_inds] = 1.0
 
