@@ -117,9 +117,10 @@ class WaymoMultiViewDataset(KittiDataset):
         lidar2img_rts = []
         for cam_name, cam_info in info['cams'].items():
             cam_id = info['cams'][cam_name]['cam_id']
-            image_paths.append(cam_info['image_path'])
+            img_path = os.path.join(self.data_root, cam_info['image_path'])
+            image_paths.append(img_path)
 
-            lidar2cam = info['calib'][f'Tr_velo_to_cam{cam_id}'].astype(np.float32)
+            lidar2cam = info['calib'][f'Tr_velo_to_cam_{cam_id}'].astype(np.float32)
             intrinsic = info['calib'][f'P{cam_id}'].astype(np.float32)
             lidar2img = intrinsic @ lidar2cam
             lidar2img_rts.append(lidar2img)
