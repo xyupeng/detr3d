@@ -63,6 +63,7 @@ class WaymoMultiViewDataset(KittiDataset):
                  pipeline=None,
                  classes=None,
                  modality=None,
+                 cams=('CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT'),
                  box_type_3d='LiDAR',
                  filter_empty_gt=True,
                  test_mode=False,
@@ -85,6 +86,7 @@ class WaymoMultiViewDataset(KittiDataset):
         self.data_infos = self.data_infos[::load_interval]
         if hasattr(self, 'flag'):
             self.flag = self.flag[::load_interval]
+        self.cams = cams
 
     def _get_pts_filename(self, idx):
         pts_filename = osp.join(self.root_split, self.pts_prefix,
@@ -115,11 +117,15 @@ class WaymoMultiViewDataset(KittiDataset):
 
         image_paths = []
         lidar2img_rts = []
-        for cam_name, cam_info in info['cams'].items():
-            cam_id = info['cams'][cam_name]['cam_id']
+        for cam_name in self.cams:
+            cam_info = info['cams'][cam_name]
+
+            # img_path
             img_path = os.path.join(self.data_root, cam_info['image_path'])
             image_paths.append(img_path)
 
+            # lidar2img
+            cam_id = cam_info['cam_id']
             lidar2cam = info['calib'][f'Tr_velo_to_cam_{cam_id}'].astype(np.float32)
             intrinsic = info['calib'][f'P{cam_id}'].astype(np.float32)
             lidar2img = intrinsic @ lidar2cam
