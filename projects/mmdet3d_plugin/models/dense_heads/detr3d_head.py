@@ -46,7 +46,8 @@ class Detr3DHead(DETRHead):
             self.code_weights = code_weights
         else:
             self.code_weights = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.2, 0.2]
-        
+            # core/bbox/util.py: normalize_bbox: (cx, cy, w, l, cz, h, rot.sin(), rot.cos(), vx, vy)
+
         self.bbox_coder = build_bbox_coder(bbox_coder)
         self.pc_range = self.bbox_coder.pc_range
         self.num_cls_fcs = num_cls_fcs - 1
@@ -286,8 +287,8 @@ class Detr3DHead(DETRHead):
         Args:
             cls_scores: FloatTensor(shape=(B, 900, cls_out_channels=10)),
             bbox_preds: FloatTensor(shape=(B, 900, code_size=10)),
-            gt_bboxes_list: list of `LiDARInstance3DBoxes`; .tensor.shape=(num_gt_bboxes, 9); len == B
-            gt_labels_list: list of LongTensor(shape=(num_gt_bboxes,)); class_id starts from 0; len == B
+            gt_bboxes_list: list of `LiDARInstance3DBoxes`; .tensor.shape=[num_gt_bboxes, 9]; len == B
+            gt_labels_list: list of LongTensor(shape=[num_gt_bboxes]); class_id starts from 0; len == B
             gt_bboxes_ignore_list (list[Tensor], optional): Bounding
                 boxes which can be ignored for each image. Default None.
         Returns:

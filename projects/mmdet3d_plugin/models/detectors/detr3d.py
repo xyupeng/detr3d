@@ -75,13 +75,7 @@ class Detr3D(MVXTwoStageDetector):
                       img_metas=None,
                       gt_bboxes_3d=None,
                       gt_labels_3d=None,
-                      points=None,
-                      gt_labels=None,
-                      gt_bboxes=None,
-                      proposals=None,
-                      gt_bboxes_ignore=None,
-                      img_depth=None,
-                      img_mask=None):
+                      ):
         """Forward training function.
         Args:
             img : shape=(B, 6, 3, 928, 1600)

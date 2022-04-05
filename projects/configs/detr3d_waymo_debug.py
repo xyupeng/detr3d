@@ -19,6 +19,8 @@ input_modality = dict(
     use_external=False
 )
 cams = ('CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT')
+class_names = ('Car', 'Pedestrian', 'Cyclist')
+num_classes = len(class_names)
 
 
 # model
@@ -49,11 +51,14 @@ model = dict(
     pts_bbox_head=dict(
         type='Detr3DHead',
         num_query=900,
-        num_classes=10,
+        num_classes=num_classes,
         in_channels=256,
         sync_cls_avg_factor=True,
         with_box_refine=True,
         as_two_stage=False,
+        code_size=8,
+        code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        # (cx, cy, w, l, cz, h, rot.sin(), rot.cos()); if code_size == 10, append (vx, vy)
         transformer=dict(
             type='Detr3DTransformer',  # mmdet3d_plugin/models/utils/detr3d_transformer.py
             decoder=dict(
@@ -84,11 +89,11 @@ model = dict(
         ),
         bbox_coder=dict(
             type='NMSFreeCoder',
-            post_center_range=[-61.2, -61.2, -10.0, 61.2, 61.2, 10.0],
+            post_center_range=[-84.8, -84.8, -10.0, 84.8, 84.8, 10.0],
             pc_range=point_cloud_range,
             max_num=300,
             voxel_size=voxel_size,
-            num_classes=10
+            num_classes=num_classes
         ),
         positional_encoding=dict(
             type='SinePositionalEncoding',
@@ -137,7 +142,6 @@ img_norm_cfg = dict(
     std=[1.0, 1.0, 1.0],
     to_rgb=False,
 )
-class_names = ['Car', 'Pedestrian', 'Cyclist']
 
 train_pipeline = [
     dict(type='LoadMultiViewImageFromFiles', to_float32=True),
