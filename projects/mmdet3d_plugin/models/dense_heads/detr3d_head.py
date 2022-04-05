@@ -130,9 +130,9 @@ class Detr3DHead(DETRHead):
         # hs: tensor(shape=(num_layers, B, num_query, embed_dim))  # inter_states
         # init_reference_out: tensor(shape=(B, num_query, 3))
         # inter_references_out: tensor(shape=(num_layers, B, num_query, 3))
+
         outputs_classes = []
         outputs_coords = []
-
         for lvl in range(hs.shape[0]):
             if lvl == 0:
                 reference = init_reference

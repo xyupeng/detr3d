@@ -1,5 +1,7 @@
-# CUDA_VISIBLE_DEVICES=7 python tools/train.py projects/configs/detr3d_waymo_debug.py --cfg-options data.samples_per_gpu=2
+# CUDA_VISIBLE_DEVICES=7 python ./tools/train.py projects/configs/detr3d_waymo_debug.py --cfg-options data.samples_per_gpu=2
+# CUDA_VISIBLE_DEVICES=4,5,6,7 ./tools/dist_train.sh projects/configs/detr3d_waymo_debug.py 8
 
+# 0. base & custom_imports
 _base_ = [
     '../../configs/mmdet3d/_base_/default_runtime.py'
 ]
@@ -11,19 +13,14 @@ custom_imports = dict(
 # required by model
 point_cloud_range = [-74.88, -74.88, -2, 74.88, 74.88, 4]
 voxel_size = [0.32, 0.32, 6]
-input_modality = dict(
-    use_lidar=False,
-    use_camera=True,
-    use_radar=False,
-    use_map=False,
-    use_external=False
-)
+
+input_modality = dict(use_lidar=False, use_camera=True)
 cams = ('CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT')
+
 class_names = ('Car', 'Pedestrian', 'Cyclist')
 num_classes = len(class_names)
 
-
-# model
+# 1. model
 model = dict(
     type='Detr3D',
     use_grid_mask=True,
@@ -129,7 +126,7 @@ model = dict(
     )
 )
 
-# dataset
+# 2. dataset
 dataset_type = 'WaymoMultiViewDataset'
 data_root = './data/waymo/kitti_format/'
 file_client_args = dict(backend='disk')
@@ -157,7 +154,7 @@ train_pipeline = [
 '''
     TODO:
     'img_metas': dict
-    'gt_bboxes_3d': LiDARInstance3DBoxes, FloatTensor(shape=[num_gt_bboxes, 9]) 
+    'gt_bboxes_3d': LiDARInstance3DBoxes, FloatTensor(shape=[num_gt_bboxes, 7]) 
     'gt_labels_3d': LongTensor(shape=[num_gt_bboxes]) 
     'img': shape=(6, 3, 928, 1600); within [-255, 255] (see img_norm_cfg.mean)
 '''
@@ -221,26 +218,24 @@ data = dict(
         box_type_3d='LiDAR',
     )
 )
+evaluation = dict(interval=24, pipeline=test_pipeline)  # interval=2
+# eval_hook priority='LOW'; after save_checkpoint() whose priority='NORMAL'
 
-# training
-optimizer = dict(
-    type='AdamW', 
-    lr=2e-4,
-    weight_decay=0.01)
+# 3. schedule
+optimizer = dict(type='AdamW', lr=2e-4, weight_decay=0.01)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
-# learning policy
 lr_config = dict(
     policy='CosineAnnealing',
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
-total_epochs = 24
-evaluation = dict(interval=24, pipeline=test_pipeline)  # interval=2
+epochs = 24
+runner = dict(type='EpochBasedRunner', max_epochs=epochs)
 
-runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
-
-# default_runtime
+# 4. runtime
 checkpoint_config = dict(interval=6)
 log_config = dict(interval=100)
-load_from = ''
+load_from = None
+resume_from = None
+workflow = [('train', epochs), ('val', 1)]
