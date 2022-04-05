@@ -1,12 +1,9 @@
-# CUDA_VISIBLE_DEVICES=7 python tools/train.py projects/configs/detr3d_waymo_debug.py --cfg-options load_from='' data.samples_per_gpu=2
+# CUDA_VISIBLE_DEVICES=7 python tools/train.py projects/configs/detr3d_waymo_debug.py --cfg-options data.samples_per_gpu=2
 
 _base_ = [
-    # '../../configs/mmdet3d/_base_/datasets/nus-3d.py',
     '../../configs/mmdet3d/_base_/default_runtime.py'
 ]
 
-# plugin=False
-# plugin_dir='projects/mmdet3d_plugin/'
 custom_imports = dict(
     imports=['projects.mmdet3d_plugin'],
     allow_failed_imports=False)
@@ -15,6 +12,7 @@ custom_imports = dict(
 point_cloud_range = [-74.88, -74.88, -2, 74.88, 74.88, 4]
 voxel_size = [0.32, 0.32, 6]
 
+# model
 model = dict(
     type='Detr3D',
     use_grid_mask=True,
@@ -116,6 +114,7 @@ model = dict(
     )
 )
 
+# dataset
 dataset_type = 'WaymoMultiViewDataset'
 data_root = './data/waymo/kitti_format/'
 file_client_args = dict(backend='disk')
@@ -182,30 +181,41 @@ data = dict(
         type=dataset_type,
         data_root=data_root,
         ann_file=data_root + ann_file_train,
+        split='training',
         pipeline=train_pipeline,
         classes=class_names,
         modality=input_modality,
         test_mode=False,
-        use_valid_flag=True,
         # we use box_type_3d='LiDAR' in kitti and nuscenes dataset
         # and box_type_3d='Depth' in sunrgbd and scannet dataset.
         box_type_3d='LiDAR',
         load_interval=5,
     ),
     val=dict(
+        type=dataset_type,
+        data_root=data_root,
         ann_file=data_root + ann_file_val,
+        split='training',
         pipeline=test_pipeline,
-        classes=class_names,
         modality=input_modality,
+        classes=class_names,
+        test_mode=True,
+        box_type_3d='LiDAR',
     ),
     test=dict(
+        type=dataset_type,
+        data_root=data_root,
         ann_file=data_root + ann_file_test,
+        split='training',
         pipeline=test_pipeline,
-        classes=class_names,
         modality=input_modality,
-    ),
+        classes=class_names,
+        test_mode=True,
+        box_type_3d='LiDAR',
+    )
 )
 
+# training
 optimizer = dict(
     type='AdamW', 
     lr=2e-4,
@@ -226,4 +236,4 @@ total_epochs = 24
 evaluation = dict(interval=2, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
-load_from='ckpts/fcos3d.pth'
+load_from = ''
