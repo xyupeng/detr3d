@@ -1,3 +1,5 @@
+# CUDA_VISIBLE_DEVICES=7 python tools/train.py projects/configs/detr3d_debug.py --cfg-options load_from='' data.samples_per_gpu=1
+
 _base_ = [
     '../../configs/mmdet3d/_base_/datasets/nus-3d.py',
     '../../configs/mmdet3d/_base_/default_runtime.py'
@@ -148,9 +150,9 @@ train_pipeline = [
 ]
 '''
     'img_metas': dict
-    'gt_bboxes_3d': LiDARInstance3DBoxes, FloatTensor(shape=(num_gt_bboxes, 9)) (mmdet3d/core/bbox/structures/lidar_box3d.py)
-    'gt_labels_3d': LongTensor(shape=(num_gt_bboxes,)) 
-    'img': shape=(6, 3, 928, 1600); [-255, 255] (see img_norm_cfg.mean)
+    'gt_bboxes_3d': LiDARInstance3DBoxes, FloatTensor(shape=[num_gt_bboxes, 9]) (mmdet3d/core/bbox/structures/lidar_box3d.py)
+    'gt_labels_3d': LongTensor(shape=[num_gt_bboxes]) 
+    'img': shape=(6, 3, 928, 1600); within [-255, 255] (see img_norm_cfg.mean)
 '''
 
 test_pipeline = [
