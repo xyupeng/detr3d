@@ -133,7 +133,7 @@ model = dict(
 dataset_type = 'WaymoMultiViewDataset'
 data_root = './data/waymo/kitti_format/'
 file_client_args = dict(backend='disk')
-ann_file_train = 'waymo_multi_view_infos_train_100.pkl'
+ann_file_train = 'waymo_multi_view_infos_train.pkl'
 ann_file_val = 'waymo_multi_view_infos_val.pkl'
 ann_file_test = 'waymo_multi_view_infos_val.pkl'
 
@@ -181,7 +181,7 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=6,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,
@@ -226,10 +226,6 @@ data = dict(
 optimizer = dict(
     type='AdamW', 
     lr=2e-4,
-    paramwise_cfg=dict(
-        custom_keys={
-            'img_backbone': dict(lr_mult=0.1),
-        }),
     weight_decay=0.01)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
@@ -240,7 +236,11 @@ lr_config = dict(
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3)
 total_epochs = 24
-evaluation = dict(interval=2, pipeline=test_pipeline)
+evaluation = dict(interval=24, pipeline=test_pipeline)  # interval=2
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
+
+# default_runtime
+checkpoint_config = dict(interval=6)
+log_config = dict(interval=100)
 load_from = ''
