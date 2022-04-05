@@ -1,4 +1,4 @@
-# CUDA_VISIBLE_DEVICES=7 python tools/train.py projects/configs/detr3d_debug.py --cfg-options load_from='' data.samples_per_gpu=1
+# CUDA_VISIBLE_DEVICES=7 python tools/train.py projects/configs/detr3d_nus_debug.py
 
 _base_ = [
     '../../configs/mmdet3d/_base_/datasets/nus-3d.py',
@@ -175,7 +175,7 @@ test_pipeline = [
 
 
 data = dict(
-    samples_per_gpu=1,
+    samples_per_gpu=2,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,
@@ -212,4 +212,4 @@ total_epochs = 24
 evaluation = dict(interval=2, pipeline=test_pipeline)
 
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
-load_from='ckpts/fcos3d.pth'
+load_from = ''  # 'ckpts/fcos3d.pth'

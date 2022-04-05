@@ -175,7 +175,7 @@ class Detr3DHead(DETRHead):
                            gt_labels,
                            gt_bboxes,
                            gt_bboxes_ignore=None):
-        """"Compute regression and classification targets for one image.
+        """Compute regression and classification targets for one image.
         Outputs from a single decoder layer of a single feature level are used.
         Args:
             cls_score (Tensor): Box score logits from a single decoder layer
@@ -231,7 +231,7 @@ class Detr3DHead(DETRHead):
                     gt_bboxes_list,
                     gt_labels_list,
                     gt_bboxes_ignore_list=None):
-        """"Compute regression and classification targets for a batch image.
+        """Compute regression and classification targets for a batch image.
         Outputs from a single decoder layer of a single feature level are used.
         Args:
             cls_scores_list (list[Tensor]): Box score logits from a single
@@ -282,7 +282,7 @@ class Detr3DHead(DETRHead):
                     gt_bboxes_list,
                     gt_labels_list,
                     gt_bboxes_ignore_list=None):
-        """"Loss function for outputs from a single decoder layer of a single
+        """Loss function for outputs from a single decoder layer of a single
         feature level.
         Args:
             cls_scores: FloatTensor(shape=(B, 900, cls_out_channels=10)),
