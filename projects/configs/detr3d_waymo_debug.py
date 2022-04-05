@@ -11,6 +11,15 @@ custom_imports = dict(
 # required by model
 point_cloud_range = [-74.88, -74.88, -2, 74.88, 74.88, 4]
 voxel_size = [0.32, 0.32, 6]
+input_modality = dict(
+    use_lidar=False,
+    use_camera=True,
+    use_radar=False,
+    use_map=False,
+    use_external=False
+)
+cams = ('CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT')
+
 
 # model
 model = dict(
@@ -63,6 +72,7 @@ model = dict(
                             type='Detr3DCrossAtten',  # mmdet3d_plugin/models/utils/detr3d_transformer.py
                             pc_range=point_cloud_range,
                             num_points=1,
+                            num_cams=len(cams),
                             embed_dims=256)
                     ],
                     feedforward_channels=512,
@@ -129,14 +139,6 @@ img_norm_cfg = dict(
 )
 class_names = ['Car', 'Pedestrian', 'Cyclist']
 
-input_modality = dict(
-    use_lidar=False,
-    use_camera=True,
-    use_radar=False,
-    use_map=False,
-    use_external=False
-)
-
 train_pipeline = [
     dict(type='LoadMultiViewImageFromFiles', to_float32=True),
     dict(type='PhotoMetricDistortionMultiViewImage'),
@@ -185,7 +187,7 @@ data = dict(
         pipeline=train_pipeline,
         classes=class_names,
         modality=input_modality,
-        cams=('CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT'),
+        cams=cams,
         test_mode=False,
         box_type_3d='LiDAR',
         load_interval=5,
@@ -197,7 +199,7 @@ data = dict(
         split='training',
         pipeline=test_pipeline,
         modality=input_modality,
-        cams=('CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT'),
+        cams=cams,
         classes=class_names,
         test_mode=True,
         box_type_3d='LiDAR',
@@ -209,7 +211,7 @@ data = dict(
         split='training',
         pipeline=test_pipeline,
         modality=input_modality,
-        cams=('CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT'),
+        cams=cams,
         classes=class_names,
         test_mode=True,
         box_type_3d='LiDAR',
