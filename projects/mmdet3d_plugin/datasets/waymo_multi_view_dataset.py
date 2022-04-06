@@ -448,8 +448,9 @@ class WaymoMultiViewDataset(KittiDataset):
                 mmcv.track_iter_progress(net_outputs)):
             annos = []
             info = self.data_infos[idx]
-            sample_idx = info['image']['image_idx']
-            image_shape = info['image']['image_shape'][:2]
+            cam_info = info['cams'][self.cams[0]]
+            sample_idx = cam_info['image_idx']
+            image_shape = cam_info['image_shape'][:2]
 
             box_dict = self.convert_valid_bboxes(pred_dicts, info)
             if len(box_dict['bbox']) > 0:
@@ -560,7 +561,7 @@ class WaymoMultiViewDataset(KittiDataset):
         box_preds = box_dict['boxes_3d']
         scores = box_dict['scores_3d']
         labels = box_dict['labels_3d']
-        sample_idx = info['image']['image_idx']
+        sample_idx = info['cams'][self.cams[0]]['image_idx']
         box_preds.limit_yaw(offset=0.5, period=np.pi * 2)
 
         if len(box_preds) == 0:
@@ -572,12 +573,11 @@ class WaymoMultiViewDataset(KittiDataset):
                 label_preds=np.zeros([0, 4]),
                 sample_idx=sample_idx)
 
-        rect = info['calib']['R0_rect'].astype(np.float32)
-        Trv2c = info['calib']['Tr_velo_to_cam'].astype(np.float32)
+        Trv2c = info['calib']['Tr_velo_to_cam_0'].astype(np.float32)
         P0 = info['calib']['P0'].astype(np.float32)
         P0 = box_preds.tensor.new_tensor(P0)
 
-        box_preds_camera = box_preds.convert_to(Box3DMode.CAM, rect @ Trv2c)
+        box_preds_camera = box_preds.convert_to(Box3DMode.CAM, Trv2c)
 
         box_corners = box_preds_camera.corners
         box_corners_in_image = points_cam2img(box_corners, P0)

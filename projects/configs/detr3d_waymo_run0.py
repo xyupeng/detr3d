@@ -132,7 +132,7 @@ data_root = './data/waymo/kitti_format/'
 file_client_args = dict(backend='disk')
 ann_file_train = 'waymo_multi_view_infos_train.pkl'
 ann_file_val = 'waymo_multi_view_infos_val.pkl'
-ann_file_test = 'waymo_multi_view_infos_val.pkl'
+ann_file_test = 'waymo_multi_view_infos_train_100.pkl'
 
 img_norm_cfg = dict(
     mean=[103.530, 116.280, 123.675],
