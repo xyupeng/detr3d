@@ -23,6 +23,8 @@ def parse_args():
     parser.add_argument('config', help='test config file path')
     parser.add_argument('--load', help='checkpoint model path')
     parser.add_argument('--work-dir', help='the dir to save test results')
+    parser.add_argument('--no-infer', action='store_true',
+                        help='Whether to do inference; can be set to true when output.pkl is saved')
     parser.add_argument(
         '--fuse-conv-bn',
         action='store_true',
@@ -197,22 +199,24 @@ def main():
         # segmentation dataset has `PALETTE` attribute
         model.PALETTE = dataset.PALETTE
 
-    if not distributed:
-        model = MMDataParallel(model, device_ids=[0])
-        outputs = single_gpu_test(model, data_loader, args.show, args.show_dir)
-    else:
-        model = MMDistributedDataParallel(
-            model.cuda(),
-            device_ids=[torch.cuda.current_device()],
-            broadcast_buffers=False)
-        outputs = multi_gpu_test(model, data_loader, args.tmpdir,
-                                 args.gpu_collect)
-
     rank, _ = get_dist_info()
-    if rank == 0:
-        print(f'\nwriting results to {cfg.out}')
-        mmcv.dump(outputs, cfg.out)
+    if not args.no_infer:
+        if not distributed:
+            model = MMDataParallel(model, device_ids=[0])
+            outputs = single_gpu_test(model, data_loader, args.show, args.show_dir)
+        else:
+            model = MMDistributedDataParallel(
+                model.cuda(),
+                device_ids=[torch.cuda.current_device()],
+                broadcast_buffers=False)
+            outputs = multi_gpu_test(model, data_loader, args.tmpdir,
+                                     args.gpu_collect)
 
+        if rank == 0:
+            print(f'\nwriting results to {cfg.out}')
+            mmcv.dump(outputs, cfg.out)
+
+    if rank == 0:
         kwargs = {} if args.eval_options is None else args.eval_options
         if args.format_only:
             dataset.format_results(outputs, **kwargs)
