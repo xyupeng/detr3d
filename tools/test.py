@@ -231,7 +231,7 @@ def main():
             ]:
                 eval_kwargs.pop(key, None)
             eval_kwargs.update(dict(metric=args.eval, **kwargs))
-            print(dataset.evaluate(outputs, **eval_kwargs))
+            ap_dict = dataset.evaluate(outputs, **eval_kwargs)
 
 
 # CUDA_VISIBLE_DEVICES=7 python tools/test.py ./work_dirs/detr3d_waymo_run0/latest.pth
