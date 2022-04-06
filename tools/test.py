@@ -200,7 +200,9 @@ def main():
         model.PALETTE = dataset.PALETTE
 
     rank, _ = get_dist_info()
-    if not args.no_infer:
+    if args.no_infer:
+        outputs = mmcv.load(cfg.out)
+    else:
         if not distributed:
             model = MMDataParallel(model, device_ids=[0])
             outputs = single_gpu_test(model, data_loader, args.show, args.show_dir)
