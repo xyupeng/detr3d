@@ -21,8 +21,8 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='MMDet test (and eval) a model')
     parser.add_argument('config', help='test config file path')
-    parser.add_argument('--load', help='checkpoint model path')
-    parser.add_argument('--work-dir', help='the dir to save test results')
+    parser.add_argument('checkpoint', help='checkpoint file')
+    parser.add_argument('--out', help='output result file in pickle format')
     parser.add_argument(
         '--fuse-conv-bn',
         action='store_true',
@@ -99,22 +99,52 @@ def parse_args():
     return args
 
 
-def get_cfg(args):
-    # assert args.out or args.eval or args.format_only or args.show \
-    #        or args.show_dir, \
-    #     ('Please specify at least one operation (save/eval/format/show the '
-    #      'results / save the results) with the argument "--out", "--eval"'
-    #      ', "--format-only", "--show" or "--show-dir"')
+def main():
+    args = parse_args()
 
-    # if args.eval and args.format_only:
-    #     raise ValueError('--eval and --format_only cannot be both specified')
+    assert args.out or args.eval or args.format_only or args.show \
+        or args.show_dir, \
+        ('Please specify at least one operation (save/eval/format/show the '
+         'results / save the results) with the argument "--out", "--eval"'
+         ', "--format-only", "--show" or "--show-dir"')
 
-    # if args.out is not None and not args.out.endswith(('.pkl', '.pickle')):
-    #     raise ValueError('The output file must be a pkl file.')
+    if args.eval and args.format_only:
+        raise ValueError('--eval and --format_only cannot be both specified')
 
-    cfg = Config.fromfile(args.config)  # already handled custom_imports
+    if args.out is not None and not args.out.endswith(('.pkl', '.pickle')):
+        raise ValueError('The output file must be a pkl file.')
+
+    cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
+    # import modules from string list.
+    if cfg.get('custom_imports', None):
+        from mmcv.utils import import_modules_from_strings
+        import_modules_from_strings(**cfg['custom_imports'])
+    
+    # import modules from plguin/xx, registry will be updated
+    if hasattr(cfg, 'plugin'):
+        if cfg.plugin:
+            import importlib
+            if hasattr(cfg, 'plugin_dir'):
+                plugin_dir = cfg.plugin_dir
+                _module_dir = os.path.dirname(plugin_dir)
+                _module_dir = _module_dir.split('/')
+                _module_path = _module_dir[0]
+
+                for m in _module_dir[1:]:
+                    _module_path = _module_path + '.' + m
+                print(_module_path)
+                plg_lib = importlib.import_module(_module_path)
+            else:
+                # import dir is the dirpath for the config file
+                _module_dir = os.path.dirname(args.config)
+                _module_dir = _module_dir.split('/')
+                _module_path = _module_dir[0]
+                for m in _module_dir[1:]:
+                    _module_path = _module_path + '.' + m
+                print(_module_path)
+                plg_lib = importlib.import_module(_module_path)
 
     # set cudnn_benchmark
     if cfg.get('cudnn_benchmark', False):
@@ -122,6 +152,7 @@ def get_cfg(args):
 
     cfg.model.pretrained = None
     # in case the test dataset is concatenated
+    samples_per_gpu = 1
     if isinstance(cfg.data.test, dict):
         cfg.data.test.test_mode = True
         samples_per_gpu = cfg.data.test.pop('samples_per_gpu', 1)
@@ -138,25 +169,6 @@ def get_cfg(args):
             for ds_cfg in cfg.data.test:
                 ds_cfg.pipeline = replace_ImageToTensor(ds_cfg.pipeline)
 
-    if args.load:
-        cfg.load = args.load
-
-    if args.work_dir:
-        cfg.work_dir = args.work_dir
-    elif cfg.get('work_dir', None) is None:
-        train_dir = os.path.dirname(args.load)
-        cfg.work_dir = os.path.join(train_dir, 'test')
-    os.makedirs(cfg.work_dir, exist_ok=True)
-
-    cfg.out = os.path.join(cfg.work_dir, 'output.pkl')
-
-    return cfg
-
-
-def main():
-    args = parse_args()
-    cfg = get_cfg(args)
-
     # init distributed env first, since logger depends on the dist info.
     if args.launcher == 'none':
         distributed = False
@@ -172,7 +184,7 @@ def main():
     dataset = build_dataset(cfg.data.test)
     data_loader = build_dataloader(
         dataset,
-        samples_per_gpu=cfg.data.samples_per_gpu,
+        samples_per_gpu=samples_per_gpu,
         workers_per_gpu=cfg.data.workers_per_gpu,
         dist=distributed,
         shuffle=False)
@@ -180,8 +192,10 @@ def main():
     # build the model and load checkpoint
     cfg.model.train_cfg = None
     model = build_model(cfg.model, test_cfg=cfg.get('test_cfg'))
-    checkpoint = load_checkpoint(model, cfg.load, map_location='cpu')
-
+    fp16_cfg = cfg.get('fp16', None)
+    if fp16_cfg is not None:
+        wrap_fp16_model(model)
+    checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
     if args.fuse_conv_bn:
         model = fuse_conv_bn(model)
     # old versions did not save class info in checkpoints, this walkaround is
@@ -210,9 +224,9 @@ def main():
 
     rank, _ = get_dist_info()
     if rank == 0:
-        print(f'\nwriting results to {cfg.out}')
-        mmcv.dump(outputs, cfg.out)
-
+        if args.out:
+            print(f'\nwriting results to {args.out}')
+            mmcv.dump(outputs, args.out)
         kwargs = {} if args.eval_options is None else args.eval_options
         if args.format_only:
             dataset.format_results(outputs, **kwargs)
@@ -228,6 +242,5 @@ def main():
             print(dataset.evaluate(outputs, **eval_kwargs))
 
 
-# CUDA_VISIBLE_DEVICES=7 python tools/test.py ./work_dirs/detr3d_waymo_run0/latest.pth
 if __name__ == '__main__':
     main()
