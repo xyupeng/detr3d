@@ -169,6 +169,7 @@ test_pipeline = [
         load_dim=6,
         use_dim=3,
         file_client_args=file_client_args),
+    dict(type='LoadAnnotations3D', with_bbox_3d=True),
     dict(
         type='MultiScaleFlipAug3D',
         img_scale=(1333, 800),
@@ -180,7 +181,8 @@ test_pipeline = [
                 type='DefaultFormatBundle3D',
                 class_names=class_names,
                 with_label=False),
-            dict(type='Collect3D', keys=['img', 'points'])
+            dict(type='Collect3D', keys=['img', 'points', 'gt_bboxes_3d'])
+            # 'points' and 'gt_bboxes_3d' are only for visualization
         ])
 ]
 

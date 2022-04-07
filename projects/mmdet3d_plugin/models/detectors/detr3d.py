@@ -235,5 +235,12 @@ class Detr3D(MVXTwoStageDetector):
                 ValueError(
                     f'Unsupported box_mode_3d {box_mode_3d} for conversion!')
 
+            gt_bboxes_3d = None
+            if 'gt_bboxes_3d' in data.keys():
+                if isinstance(data['gt_bboxes_3d'][0], DC):
+                     gt_bboxes_3d = data['gt_bboxes_3d'][0]._data[0][batch_id].numpy()
+                else:
+                    ValueError(f"Unsupported data type {type(data['gt_bboxes_3d'][0])} "
+                               f'for visualization!')
             pred_bboxes = pred_bboxes.tensor.cpu().numpy()
             show_result(points, None, pred_bboxes, out_dir, file_name, show=show)
