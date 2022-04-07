@@ -205,7 +205,8 @@ def main():
     else:
         if not distributed:
             model = MMDataParallel(model, device_ids=[0])
-            outputs = single_gpu_test(model, data_loader, args.show, args.show_dir)
+            # outputs = single_gpu_test(model, data_loader, args.show, args.show_dir)
+            outputs = single_gpu_test(model, data_loader, args.show, cfg.work_dir)  # By Xiangyu Peng
         else:
             model = MMDistributedDataParallel(
                 model.cuda(),
