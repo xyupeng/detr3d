@@ -13,7 +13,7 @@ from mmcv.runner import get_dist_info, init_dist
 from mmdet import __version__ as mmdet_version
 from mmdet3d import __version__ as mmdet3d_version
 from mmdet3d.apis import init_random_seed, train_model
-from mmdet3d.datasets import build_dataset
+from mmdet3d.datasets import build_dataloader, build_dataset
 from mmdet3d.models import build_model  # already registered all models
 from mmdet3d.utils import collect_env, get_root_logger
 from mmdet.apis import set_random_seed
@@ -165,7 +165,14 @@ def main():
     cfg = get_cfg(args)
 
     ds = build_dataset(cfg.data.train)
+    data_loader = build_dataloader(
+        ds,
+        samples_per_gpu=1,
+        workers_per_gpu=cfg.data.workers_per_gpu,
+        dist=False,
+        shuffle=False)
     x = ds[0]
+    y = next(iter(data_loader))
     import pdb; pdb.set_trace()
 
 
