@@ -156,7 +156,7 @@ train_pipeline = [
     'img_metas': dict
     'gt_bboxes_3d': LiDARInstance3DBoxes, FloatTensor(shape=[num_gt_bboxes, 7]) 
     'gt_labels_3d': LongTensor(shape=[num_gt_bboxes]) 
-    'img': shape=(6, 3, 928, 1600); within [-255, 255] (see img_norm_cfg.mean)
+    'img': shape=(3, 3, 1280, 1920); within [-255, 255] (see img_norm_cfg.mean)
 '''
 
 test_pipeline = [

@@ -182,3 +182,6 @@ class Detr3D(MVXTwoStageDetector):
         for result_dict, pts_bbox in zip(bbox_list, bbox_pts):
             result_dict['pts_bbox'] = pts_bbox
         return bbox_list
+
+    def show_results(self, data, result, out_dir, **kwargs):
+        super().show_results(data, result, out_dir)
