@@ -45,6 +45,7 @@ def parse_args():
     parser.add_argument('--show', action='store_true', help='show results')
     parser.add_argument(
         '--show-dir', help='directory where results will be saved')
+    parser.add_argument('--score-thr', default=0.3, type=float, help='show score threshold')
     parser.add_argument(
         '--gpu-collect',
         action='store_true',
@@ -206,7 +207,7 @@ def main():
         if not distributed:
             model = MMDataParallel(model, device_ids=[0])
             # outputs = single_gpu_test(model, data_loader, args.show, args.show_dir)
-            outputs = single_gpu_test(model, data_loader, args.show, cfg.work_dir)  # By Xiangyu Peng
+            outputs = single_gpu_test(model, data_loader, args.show, cfg.work_dir, args.score_thr)  # By Xiangyu Peng
         else:
             model = MMDistributedDataParallel(
                 model.cuda(),

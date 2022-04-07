@@ -190,7 +190,7 @@ class Detr3D(MVXTwoStageDetector):
             result_dict['pts_bbox'] = pts_bbox
         return bbox_list
 
-    def show_results(self, data, result, out_dir, show=False, **kwargs):
+    def show_results(self, data, result, out_dir, show=False, score_thr=0.3):
         """Results visualization.
 
         Args:
@@ -221,8 +221,9 @@ class Detr3D(MVXTwoStageDetector):
             file_name = osp.split(pts_filename)[-1].split('.')[0]
 
             assert out_dir is not None, 'Expect out_dir, got none.'
-            inds = result[batch_id]['pts_bbox']['scores_3d'] > 0.1
+            inds = result[batch_id]['pts_bbox']['scores_3d'] > score_thr  # TODO
             pred_bboxes = result[batch_id]['pts_bbox']['boxes_3d'][inds]
+            pred_labels = result[batch_id]['pts_bbox']['labels_3d'][inds]
 
             # for now we convert points and bbox into depth mode
             if (box_mode_3d == Box3DMode.CAM) or (box_mode_3d
@@ -234,13 +235,13 @@ class Detr3D(MVXTwoStageDetector):
             elif box_mode_3d != Box3DMode.DEPTH:
                 ValueError(
                     f'Unsupported box_mode_3d {box_mode_3d} for conversion!')
+            pred_bboxes = pred_bboxes.tensor.cpu().numpy()
 
             gt_bboxes_3d = None
             if 'gt_bboxes_3d' in data.keys():
                 if isinstance(data['gt_bboxes_3d'][0], DC):
-                     gt_bboxes_3d = data['gt_bboxes_3d'][0]._data[0][batch_id].numpy()
+                     gt_bboxes_3d = data['gt_bboxes_3d'][0].data[0][batch_id].tensor.cpu().numpy()
                 else:
                     ValueError(f"Unsupported data type {type(data['gt_bboxes_3d'][0])} "
                                f'for visualization!')
-            pred_bboxes = pred_bboxes.tensor.cpu().numpy()
-            show_result(points, None, pred_bboxes, out_dir, file_name, show=show)
+            show_result(points, gt_bboxes_3d, pred_bboxes, out_dir, file_name, show=show, pred_labels=pred_labels)
