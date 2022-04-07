@@ -164,16 +164,23 @@ test_pipeline = [
     dict(type='NormalizeMultiviewImage', **img_norm_cfg),
     dict(type='PadMultiViewImage', size_divisor=32),
     dict(
+        type='LoadPointsFromFile',
+        coord_type='LIDAR',
+        load_dim=6,
+        use_dim=3,
+        file_client_args=file_client_args),
+    dict(
         type='MultiScaleFlipAug3D',
         img_scale=(1333, 800),
         pts_scale_ratio=1,
         flip=False,
         transforms=[
+            dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
             dict(
                 type='DefaultFormatBundle3D',
                 class_names=class_names,
                 with_label=False),
-            dict(type='Collect3D', keys=['img'])
+            dict(type='Collect3D', keys=['img', 'points'])
         ])
 ]
 

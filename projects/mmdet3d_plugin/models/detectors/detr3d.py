@@ -146,8 +146,10 @@ class Detr3D(MVXTwoStageDetector):
         ]
         return bbox_results
     
-    def simple_test(self, img_metas, img=None, rescale=False):
-        """Test function without augmentaiton."""
+    def simple_test(self, img_metas, img=None, rescale=False, **kwargs):
+        """Test function without augmentaiton.
+            add kwargs to tolerate data unused in test but required by visualization (show_result()).
+        """
         img_feats = self.extract_img_feat(img=img, img_metas=img_metas)
 
         bbox_list = [dict() for i in range(len(img_metas))]
