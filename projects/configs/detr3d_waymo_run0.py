@@ -152,7 +152,7 @@ train_pipeline = [
     dict(type='Collect3D', keys=['gt_bboxes_3d', 'gt_labels_3d', 'img'])
 ]
 '''
-    TODO:
+    all value are DC; refer to value._data
     'img_metas': dict
     'gt_bboxes_3d': LiDARInstance3DBoxes, FloatTensor(shape=[num_gt_bboxes, 7]) 
     'gt_labels_3d': LongTensor(shape=[num_gt_bboxes]) 

@@ -140,9 +140,9 @@ class WaymoMultiViewDataset(KittiDataset):
             lidar2img=lidar2img_rts,
         )
 
-        if not self.test_mode:
-            annos = self.get_ann_info(index)
-            input_dict['ann_info'] = annos
+        # if not self.test_mode:  # load gt_bbox in test_mode for visualization
+        annos = self.get_ann_info(index)
+        input_dict['ann_info'] = annos
 
         return input_dict
 
