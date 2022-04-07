@@ -166,6 +166,7 @@ def main():
 
     ds = build_dataset(cfg.data.train)
     x = ds[0]
+    import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':
