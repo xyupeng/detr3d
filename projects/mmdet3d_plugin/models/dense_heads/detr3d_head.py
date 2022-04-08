@@ -429,7 +429,7 @@ class Detr3DHead(DETRHead):
         ret_list = []
         for i in range(num_samples):
             preds = preds_dicts[i]
-            bboxes = preds['bboxes']  # bboxes.shape=[num_qeuries, 7] for waymo
+            bboxes = preds['bboxes']  # bboxes.shape=[num_queries, 7] for waymo
             bboxes[:, 2] = bboxes[:, 2] - bboxes[:, 5] * 0.5
             bboxes = img_metas[i]['box_type_3d'](bboxes, bboxes.shape[1])  # modified by Xiangyu Peng
             scores = preds['scores']
